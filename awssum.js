@@ -911,7 +911,8 @@ AwsSum.prototype.request = function(options, callback) {
         method  : options.method,
         host    : options.host,
         path    : options.path,
-        headers : options.headers
+        headers : options.headers,
+        rejectUnauthorized : false
     };
 
     // if we have a port, then put that onto the request (can make local testing easier with a local server)
