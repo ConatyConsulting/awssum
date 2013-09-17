@@ -29,7 +29,14 @@ var userAgent = 'awssum/' + require('./package.json').version;
 
 var MARK = 'awssum: ';
 
-var parser = new xml2js.Parser({ normalize : false, trim : false, explicitRoot : true, explicitArray : false });
+var parser = new xml2js.Parser({
+    attrkey : '@',
+    valuekey : '#',
+    normalize : false,
+    trim : false,
+    explicitRoot : true,
+    explicitArray : false
+});
 
 var debug = false;
 
@@ -561,6 +568,9 @@ AwsSum.prototype.send = function(operation, args, opts, callback) {
         else if ( spec.type === 'form-array' ) {
             addParamArray( options.forms, name, args[argName], spec.prefix );
         }
+        else if ( spec.type === 'form-data' ) {
+            addParamData( options.forms, spec.setName || name, args[argName], spec.prefix );
+        }
         else if ( spec.type === 'form-base64' ) {
             if ( ! _.isUndefined(args[argName]) ) {
                 addParam( options.forms, name, (new Buffer(args[argName])).toString('base64') );
@@ -586,9 +596,7 @@ AwsSum.prototype.send = function(operation, args, opts, callback) {
 
     // build the body from either options.form, options.json or using operation.body
 
-    // !!!TODO!!!
-
-    // build the body (if defined in the operation rather than as a required attribute)
+    // build the body from either options.form, options.json or using operation.body
     if ( operation.body ) {
         if ( typeof operation.body === 'string' ) {
             options.body = operation.body;
@@ -599,6 +607,18 @@ AwsSum.prototype.send = function(operation, args, opts, callback) {
         else {
             // since this is a program error, we're gonna throw this one
             throw 'Unknown operation.body : ' + typeof operation.body;
+        }
+    } else if ( options.forms && options.forms.length ) {
+        var formParts = [];
+        options.forms.forEach(function(v, i) {
+           formParts[i] = v.name + "=" + escape(v.value);
+        });
+        options.body = formParts.join("&");
+        options.headers['content-type'] = 'application/x-www-form-urlencoded';
+    } else {
+        options.body = JSON.stringify(options.json);
+        if ( options.body === '{}' ) {
+            options.body = undefined;
         }
     }
 
